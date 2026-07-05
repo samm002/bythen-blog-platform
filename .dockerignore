@@ -1,0 +1,40 @@
+# Git metadata
+.git
+.gitignore
+
+# Build artifacts
+/bin/
+/build/
+
+# Air (hot reload) artifacts
+tmp/
+
+# Compiled binaries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+*.test
+coverage.out
+
+# Dependencies
+/vendor/
+
+# Environment variable files
+.env
+.env.*
+!.env.example
+
+# IDE, editor, and OS files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Logs
+*.log
+
+# Docker Compose files
+docker-compose*.yml
