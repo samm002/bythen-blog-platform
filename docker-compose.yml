@@ -25,6 +25,30 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    
+  migrate:
+    image: bythen-blog-platform-api
+    container_name: bythen-blog-platform-migrator
+    command:
+      - sh
+      - -c
+      - |
+        goose -dir database/migrations mysql "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(mysql:${MYSQL_PORT})/${MYSQL_DATABASE}" up && \
+        goose -dir database/seeds mysql "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(mysql:${MYSQL_PORT})/${MYSQL_DATABASE}" up
+    environment:
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "${MYSQL_PORT}"
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - bythen-network
 
   mysql:
     image: mysql

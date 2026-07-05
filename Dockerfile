@@ -4,10 +4,10 @@ FROM golang:1.26.4-alpine
 RUN apk add --no-cache git curl
 
 # Install air for hot reload
-RUN go install github.com/air-verse/air@latest
+RUN go install github.com/air-verse/air@v1.65.3
 
 # Install goose for database migrations
-RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+RUN go install github.com/pressly/goose/v3/cmd/goose@v3.27.2
 
 WORKDIR /app
 
@@ -19,5 +19,5 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Run Air for hot reload (will build into ./tmp/app and restart on changes)
+# Run App (Hot reloaded using Air)
 CMD ["air"]

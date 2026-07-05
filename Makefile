@@ -1,14 +1,24 @@
-.PHONY: help init network up run restart stop down logs ps pull build clean
+.PHONY: help \
+	init network \
+	build up run restart stop down logs ps pull clean \
+	migrate-up migrate-down migrate-status migrate-create \
+	seed-create seed-up
+	
 
 COMPOSE_FILE := docker-compose.yml
 NETWORK := bythen-network
+
+ifneq (,$(wildcard .env))
+include .env
+export
+endif
 
 .DEFAULT_GOAL := help
 
 help: ## Show available commands
 	@printf "\nUsage: make <target>\n\n"
 	@printf "Available targets:\n"
-	@grep -E '^[a-zA-Z0-9_%-]+:.*?##' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS=":.*?##";}{printf "  %-15s %s\n", $$1, $$2}'
+	@grep -hE '^[a-zA-Z0-9_%-]+:.*?##' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS=":.*?##";}{printf "  %-15s %s\n", $$1, $$2}'
 
 init: ## Initialize Docker prerequisites (env, network)
 	@printf "Initializing Docker environment...\n"
@@ -59,9 +69,42 @@ logs: ## Tail logs for app
 	docker compose -f $(COMPOSE_FILE) logs -f app
 
 ps: ## Show current service status
-	docker compose -f $(COMPOSE_FILE) ps
+	docker compose -f $(COMPOSE_FILE) ps -a
 
 clean: down ## Stop and remove containers, networks, and volumes
 	docker compose -f $(COMPOSE_FILE) down -v
 
+
+GOOSE := go run github.com/pressly/goose/v3/cmd/goose@v3.27.2
+GOOSE_DSN := $(MYSQL_USER):$(MYSQL_PASSWORD)@tcp(localhost:$(MYSQL_PORT))/$(MYSQL_DATABASE)
+
+migrate-up: network ## Run goose migrations up
+	docker compose -f $(COMPOSE_FILE) up -d mysql
+	$(GOOSE) -dir database/migrations mysql "$(GOOSE_DSN)" up
+
+migrate-down: network ## Run goose migrations down
+	docker compose -f $(COMPOSE_FILE) up -d mysql
+	$(GOOSE) -dir database/migrations mysql "$(GOOSE_DSN)" down
+
+migrate-status: network ## Show goose migration status
+	docker compose -f $(COMPOSE_FILE) up -d mysql
+	$(GOOSE) -dir database/migrations mysql "$(GOOSE_DSN)" status
+
+migrate-create: ## Create a new goose migration file: make migrate-create NAME=create_posts
+	@ if [ -z "$(NAME)" ]; then \
+		printf "Usage: make migrate-create NAME=<name>\n"; \
+		exit 1; \
+	fi
+	$(GOOSE) create -dir database/migrations "$(NAME)" sql
+
+seed-create: ## Create a new goose seeder file: make seed-create NAME=seed_posts
+	@ if [ -z "$(NAME)" ]; then \
+		printf "Usage: make migrate-create NAME=<name>\n"; \
+		exit 1; \
+	fi
+	$(GOOSE) create -dir database/seeds "$(NAME)" sql
+
+seed-up: network ## Run goose seed files
+	docker compose -f $(COMPOSE_FILE) up -d mysql
+	$(GOOSE) -dir database/seeds mysql "$(GOOSE_DSN)" up
 
